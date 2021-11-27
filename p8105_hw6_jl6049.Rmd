@@ -1,0 +1,58 @@
+---
+title: "p8105_hw6_jl6049"
+author: "LYU JING"
+date: "11/27/2021"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(ALSM)
+```
+
+Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
+```{r}
+birthweight = read.csv("birthweight.csv")
+```
+```{r}
+
+skimr::skim(birthweight)
+
+```
+No missing
+
+```{r}
+birthweight_clean =birthweight %>% 
+  select(-pnumlbw,-pnumsga) %>% 
+  mutate(babysex = factor(babysex),
+         frace = factor(frace),
+         malform = factor(malform),
+         mrace = factor(mrace))
+```
+
+Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+```{r}
+
+variables = birthweight %>% select(-bwt,-pnumlbw,-pnumsga,-malform,-frace,-mrace) %>% select(-menarche,-ppbmi)
+
+BestSub(variables[,1:12],birthweight$bwt) # best subset
+
+regsubsets(variables,birthweight$bwt,nvmax = 11)
+```
+```{r}
+
+```
+
+
+```{r}
+fit = lm(bwt ~ babysex + bhead + blength + delwt + fincome +gaweeks +mheight, data = birthweight_clean)
+```
+
+Compare your model to two others:
+
+One using length at birth and gestational age as predictors (main effects only)
+One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
+

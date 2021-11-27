@@ -21,6 +21,8 @@ skimr::skim(birthweight)
 ```
 No missing
 
+`pnumlbw` and `pnumsga` are all zero, so cancel those two columns
+
 ```{r}
 birthweight_clean =birthweight %>% 
   select(-pnumlbw,-pnumsga) %>% 
@@ -31,22 +33,52 @@ birthweight_clean =birthweight %>%
 ```
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
-```{r}
-
-variables = birthweight %>% select(-bwt,-pnumlbw,-pnumsga,-malform,-frace,-mrace) %>% select(-menarche,-ppbmi)
-
-BestSub(variables[,1:12],birthweight$bwt) # best subset
-
-regsubsets(variables,birthweight$bwt,nvmax = 11)
-```
-```{r}
-
-```
-
 
 ```{r}
-fit = lm(bwt ~ babysex + bhead + blength + delwt + fincome +gaweeks +mheight, data = birthweight_clean)
+variables = birthweight %>% select(-bwt,-pnumlbw,-pnumsga)
+
+cor(variables)
+
+variables = variables %>% select(-frace,-ppbmi,-ppwt,-ppbmi) 
+
+
+BestSub(variables,birthweight$bwt) # best subset
+
+
+
+variables = variables %>% select(-malform) 
+
+colnames(variables)
 ```
+
+Use function above to find out proper variables.
+From correlation:
+`ppwt`,`ppbmi` ,`delwt` and `wtgain` have relation, so I only keep `wtgain` and`delwt`.
+`mrace` and `frace` are correlated to each other, so only keep `mrace`
+
+Use BestSub:
+`malform` seems not influence the modle a lot so cancel it.
+
+
+```{r}
+
+fit = lm(bwt ~ babysex + bhead + blength +delwt + fincome + gaweeks + menarche + mheight + momage + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
+summary(fit)
+```
+Based on the understanding, I try to find out if `fincme` and `momage`and `menarche` is useful for our model by using lm model to fit one. I find out `fincome` and `momage`and `menarche` is not significant then cancel it.
+
+```{r}
+fit_final = lm(bwt ~ babysex + bhead + blength +delwt + gaweeks + mheight + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
+summary(fit_final)
+```
+
+```{r}
+birthweight_clean %>% 
+  modelr::add_predictions(fit_final) %>% 
+  modelr::add_residuals(fit_final) %>% 
+  ggplot(aes(x = pred, y = resid)) + geom_point(alpha = 0.1)
+```
+
 
 Compare your model to two others:
 

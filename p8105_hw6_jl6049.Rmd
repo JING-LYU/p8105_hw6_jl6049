@@ -14,7 +14,7 @@ library(tidyverse)
 
 # Problem 1
 
-Load and clean the data for regression analysis 
+**Load and clean the data for regression analysis**
 
 ```{r}
 birthweight = read.csv("birthweight.csv")
@@ -38,7 +38,9 @@ birthweight_clean =birthweight %>%
 
 
 
-Propose a regression model for birthweight. 
+**Propose a regression model for birthweight.**
+
+Use functions below to find out proper variables to fit our model.
 
 ```{r eval = FALSE}
 variables = birthweight %>% select(-bwt,-pnumlbw,-pnumsga)
@@ -53,9 +55,6 @@ BestSub(variables,birthweight$bwt) # best subset
 variables = variables %>% select(-malform) 
 
 ```
-
-Use functions above to find out proper variables to fit our model.
-
 Use `cor()` to find out correlation between variables:
 - `ppwt`,`ppbmi` ,`delwt` and `wtgain` have relation, so I only keep `wtgain` and`delwt`.
 - `mrace` and `frace` are correlated to each other, so only keep `mrace`
@@ -63,13 +62,14 @@ Use `cor()` to find out correlation between variables:
 Use `BestSub()`:
 - `malform` seems not influence the model a lot so cancel it.
 
-```{r}
 
+Based on the understanding, I `fincme` and `momage`and `menarche` are not relevant. So I try to figure this out by evaluating p values of those variables in a lm model.
+```{r}
 fit = lm(bwt ~ babysex + bhead + blength +delwt + fincome + gaweeks + menarche + mheight + momage + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
 summary(fit)
 ```
 
-Based on the understanding, I `fincme` and `momage`and `menarche` are not relevant. So I try to figure this out by evaluating p values of those variables in a lm model. I find out `fincome` and `momage`and `menarche` is not significant then cancel it.
+I find out `fincome` and `momage`and `menarche` is not significant then cancel it.
 
 
 Fit the final model:
@@ -78,16 +78,21 @@ fit_final = lm(bwt ~ babysex + bhead + blength +delwt + gaweeks + mheight + mrac
 summary(fit_final)
 ```
 
-show a plot of model residuals against fitted values
+**show a plot of model residuals against fitted values**
 ```{r}
 birthweight_clean %>% 
   add_predictions(fit_final) %>% 
   add_residuals(fit_final) %>% 
-  ggplot(aes(x = pred, y = resid)) + geom_point(alpha = 0.1)
+  ggplot(aes(x = pred, y = resid)) + geom_point(alpha = 0.1) +
+  labs(
+    title = "plot of model residuals against fitted values", 
+    x = "Predict values",
+    y = "residuals"
+  ) 
 ```
 
 
-Compare my model to two others:
+**Compare my model to two others**
 One using length at birth and gestational age as predictors (main effects only)
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 
@@ -97,7 +102,6 @@ fit_main = lm(bwt ~ blength + gaweeks, data = birthweight_clean)
 fit_interaction = lm(bwt ~ babysex + bhead + blength + babysex*bhead+bhead*blength+babysex*blength+babysex*bhead*blength , data = birthweight_clean)
 
 ```
-
 
 Make this comparison in terms of the cross-validated prediction error; 
 
@@ -127,7 +131,12 @@ cv_df %>%
     values_to = "rmse",
     names_prefix = "rmse_") %>% 
   mutate(model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + geom_violin() +
+  labs(
+    title = "comparison of the cross-validated prediction error", 
+    x = "models",
+    y = "rmse"
+  ) 
 ```
 
 # problem 2
@@ -145,6 +154,8 @@ weather_df =
     tmax = tmax / 10) %>%
   select(name, id, everything())
 ```
+
+Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities 
 
 ```{r}
 estimates =
@@ -167,6 +178,8 @@ estimates =
 
 ```
 
+Plot the distribution of your estimates, and describe these in words. 
+
 ```{r}
 estimates %>% 
   select(r.squared) %>% 
@@ -177,6 +190,12 @@ estimates %>%
   select(b0b1) %>% 
   ggplot(aes(x = b0b1)) + geom_density()
 ```
+
+Description:
+
+
+
+
 ```{r}
 ci_r =
 estimates %>%

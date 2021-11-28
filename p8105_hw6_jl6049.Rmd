@@ -25,8 +25,7 @@ skimr::skim(birthweight)
 
 ```
 
-The dataset has No missing. But `pnumlbw` and `pnumsga` are all zero, so cancel those two columns. Convert several numeric variables to factor.
-
+The dataset has No missing. But `pnumlbw` and `pnumsga` are all zero, so cancel those two columns. Then, Convert several numeric variables to factor.
 ```{r}
 birthweight_clean =birthweight %>% 
   select(-pnumlbw,-pnumsga) %>% 
@@ -56,14 +55,16 @@ variables = variables %>% select(-malform)
 
 ```
 Use `cor()` to find out correlation between variables:
+
 - `ppwt`,`ppbmi` ,`delwt` and `wtgain` have relation, so I only keep `wtgain` and`delwt`.
 - `mrace` and `frace` are correlated to each other, so only keep `mrace`
 
 Use `BestSub()`:
+
 - `malform` seems not influence the model a lot so cancel it.
 
 
-Based on the understanding, I `fincme` and `momage`and `menarche` are not relevant. So I try to figure this out by evaluating p values of those variables in a lm model.
+Based on the understanding, I guess `fincme` and `momage`and `menarche` are not relevant to response. So I try to figure this out by evaluating p values of those variables in a lm model.
 ```{r}
 fit = lm(bwt ~ babysex + bhead + blength +delwt + fincome + gaweeks + menarche + mheight + momage + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
 summary(fit)
@@ -78,7 +79,7 @@ fit_final = lm(bwt ~ babysex + bhead + blength +delwt + gaweeks + mheight + mrac
 summary(fit_final)
 ```
 
-**show a plot of model residuals against fitted values**
+**Show a plot of model residuals against fitted values**
 ```{r}
 birthweight_clean %>% 
   add_predictions(fit_final) %>% 
@@ -92,9 +93,10 @@ birthweight_clean %>%
 ```
 
 
-**Compare my model to two others**
-One using length at birth and gestational age as predictors (main effects only)
-One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+**Compare my model to two other models**
+
+- One using length at birth and gestational age as predictors (main effects only)
+- One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 
 ```{r}
 fit_main = lm(bwt ~ blength + gaweeks, data = birthweight_clean)
@@ -158,6 +160,7 @@ weather_df =
 Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities 
 
 ```{r}
+set.seed(1)
 estimates =
   weather_df %>% 
   bootstrap(n = 5000) %>% 
@@ -172,7 +175,7 @@ estimates =
   group_by(.id) %>% 
   summarize(
     r.squared = r.squared,
-    b0b1 = prod(estimate)) %>% 
+    logb0b1 = log(prod(estimate))) %>% 
   unique() %>% 
   ungroup()
 
@@ -183,17 +186,24 @@ Plot the distribution of your estimates, and describe these in words.
 ```{r}
 estimates %>% 
   select(r.squared) %>% 
-  ggplot(aes(x = r.squared)) + geom_density()
+  ggplot(aes(x = r.squared)) + geom_density() +
+  labs(
+    title = "distribution of R-square", 
+  ) 
 ```
+
+The mean of R square distribution is around 0.91. This distribution has a heavy tail extending to low values, which could means that some bootstrap samples have quite low R-square. Thus, it indicates that there are some outliers that their independent variables is not explaining much in the variation of my dependent variable!!!!!
+
 ```{r}
 estimates %>% 
-  select(b0b1) %>% 
-  ggplot(aes(x = b0b1)) + geom_density()
+  select(logb0b1) %>% 
+  ggplot(aes(x = logb0b1)) + geom_density() +
+  labs(
+    title = "distribution of log(b0*b1)",
+    x = "log(b0*b1)")
 ```
 
-Description:
-
-
+This distribution of $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is generally normal with mean around 2.02. But the distribution have a little "shoulder" near 2.025. Maybe some large outliers are included in the bootstrap sample.!!!!!!
 
 
 ```{r}
@@ -202,11 +212,15 @@ estimates %>%
   summarise(qlow_r = quantile(r.squared,probs = c(0.025)),
             qhigh_r = quantile(r.squared,probs = c(0.0975)))
 
+ci_r %>% knitr::kable()
 
 ci_b =
 estimates %>%
-  summarise(qlow_b = quantile(b0b1,probs = c(0.025)),
-            qhigh_b = quantile(b0b1,probs = c(0.0975)))
+  summarise(qlow_b = quantile(logb0b1,probs = c(0.025)),
+            qhigh_b = quantile(logb0b1,probs = c(0.0975)))
+
+ci_b %>% knitr::kable()
+
 ```
 
 

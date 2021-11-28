@@ -5,12 +5,17 @@ date: "11/27/2021"
 output: github_document
 ---
 
-```{r}
-library(tidyverse)
+```{r message=FALSE}
+
 library(ALSM)
+library(modelr)
+library(tidyverse)
 ```
 
-Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
+# Problem 1
+
+Load and clean the data for regression analysis 
+
 ```{r}
 birthweight = read.csv("birthweight.csv")
 ```
@@ -19,9 +24,8 @@ birthweight = read.csv("birthweight.csv")
 skimr::skim(birthweight)
 
 ```
-No missing
 
-`pnumlbw` and `pnumsga` are all zero, so cancel those two columns
+The dataset has No missing. But `pnumlbw` and `pnumsga` are all zero, so cancel those two columns. Convert several numeric variables to factor.
 
 ```{r}
 birthweight_clean =birthweight %>% 
@@ -32,9 +36,11 @@ birthweight_clean =birthweight %>%
          mrace = factor(mrace))
 ```
 
-Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
 
-```{r}
+
+Propose a regression model for birthweight. 
+
+```{r eval = FALSE}
 variables = birthweight %>% select(-bwt,-pnumlbw,-pnumsga)
 
 cor(variables)
@@ -44,47 +50,144 @@ variables = variables %>% select(-frace,-ppbmi,-ppwt,-ppbmi)
 
 BestSub(variables,birthweight$bwt) # best subset
 
-
-
 variables = variables %>% select(-malform) 
 
-colnames(variables)
 ```
 
-Use function above to find out proper variables.
-From correlation:
-`ppwt`,`ppbmi` ,`delwt` and `wtgain` have relation, so I only keep `wtgain` and`delwt`.
-`mrace` and `frace` are correlated to each other, so only keep `mrace`
+Use functions above to find out proper variables to fit our model.
 
-Use BestSub:
-`malform` seems not influence the modle a lot so cancel it.
+Use `cor()` to find out correlation between variables:
+- `ppwt`,`ppbmi` ,`delwt` and `wtgain` have relation, so I only keep `wtgain` and`delwt`.
+- `mrace` and `frace` are correlated to each other, so only keep `mrace`
 
+Use `BestSub()`:
+- `malform` seems not influence the model a lot so cancel it.
 
 ```{r}
 
 fit = lm(bwt ~ babysex + bhead + blength +delwt + fincome + gaweeks + menarche + mheight + momage + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
 summary(fit)
 ```
-Based on the understanding, I try to find out if `fincme` and `momage`and `menarche` is useful for our model by using lm model to fit one. I find out `fincome` and `momage`and `menarche` is not significant then cancel it.
 
+Based on the understanding, I `fincme` and `momage`and `menarche` are not relevant. So I try to figure this out by evaluating p values of those variables in a lm model. I find out `fincome` and `momage`and `menarche` is not significant then cancel it.
+
+
+Fit the final model:
 ```{r}
 fit_final = lm(bwt ~ babysex + bhead + blength +delwt + gaweeks + mheight + mrace  +parity +smoken+  wtgain , data = birthweight_clean)
 summary(fit_final)
 ```
 
+show a plot of model residuals against fitted values
 ```{r}
 birthweight_clean %>% 
-  modelr::add_predictions(fit_final) %>% 
-  modelr::add_residuals(fit_final) %>% 
+  add_predictions(fit_final) %>% 
+  add_residuals(fit_final) %>% 
   ggplot(aes(x = pred, y = resid)) + geom_point(alpha = 0.1)
 ```
 
 
-Compare your model to two others:
-
+Compare my model to two others:
 One using length at birth and gestational age as predictors (main effects only)
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
 
-Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
+```{r}
+fit_main = lm(bwt ~ blength + gaweeks, data = birthweight_clean)
+
+fit_interaction = lm(bwt ~ babysex + bhead + blength + babysex*bhead+bhead*blength+babysex*blength+babysex*bhead*blength , data = birthweight_clean)
+
+```
+
+
+Make this comparison in terms of the cross-validated prediction error; 
+
+```{r}
+cv_df = 
+  crossv_mc(birthweight_clean, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)) %>% 
+  mutate(
+    fit_final  = map(train, ~lm(bwt ~ babysex + bhead + blength +delwt + gaweeks + mheight + mrace  +parity +smoken+  wtgain , data = .x)),
+    fit_main  = map(train, ~ lm(bwt ~ blength + gaweeks, data = .x)),
+    fit_interaction  = map(train, ~lm(bwt ~ babysex + bhead + blength + babysex*bhead+bhead*blength+babysex*blength+babysex*bhead*blength , data = .x))) %>% 
+  mutate(
+    rmse_final = map2_dbl(fit_final, test, ~rmse(model = .x, data = .y)),
+    rmse_main = map2_dbl(fit_main, test, ~rmse(model = .x, data = .y)),
+    rmse_nteraction = map2_dbl(fit_interaction, test, ~rmse(model = .x, data = .y)))
+
+```
+
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+# problem 2
+
+```{r message=FALSE}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+```{r}
+estimates =
+  weather_df %>% 
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax ~ tmin, data = .x) ),
+    results1 = map(models, broom::glance),
+    results2 = map(models, broom::tidy)) %>% 
+  select(-strap, -models) %>% 
+  unnest(results1) %>% 
+  select(.id,r.squared,results2) %>% 
+  unnest(results2) %>% 
+  group_by(.id) %>% 
+  summarize(
+    r.squared = r.squared,
+    b0b1 = prod(estimate)) %>% 
+  unique() %>% 
+  ungroup()
+
+```
+
+```{r}
+estimates %>% 
+  select(r.squared) %>% 
+  ggplot(aes(x = r.squared)) + geom_density()
+```
+```{r}
+estimates %>% 
+  select(b0b1) %>% 
+  ggplot(aes(x = b0b1)) + geom_density()
+```
+```{r}
+ci_r =
+estimates %>%
+  summarise(qlow_r = quantile(r.squared,probs = c(0.025)),
+            qhigh_r = quantile(r.squared,probs = c(0.0975)))
+
+
+ci_b =
+estimates %>%
+  summarise(qlow_b = quantile(b0b1,probs = c(0.025)),
+            qhigh_b = quantile(b0b1,probs = c(0.0975)))
+```
+
 

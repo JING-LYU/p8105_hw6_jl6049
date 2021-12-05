@@ -19,6 +19,7 @@ library(tidyverse)
 ```{r}
 birthweight = read.csv("birthweight.csv")
 ```
+
 ```{r}
 
 skimr::skim(birthweight)

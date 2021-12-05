@@ -88,7 +88,7 @@ birthweight_clean %>%
   labs(
     title = "plot of model residuals against fitted values", 
     x = "Predict values",
-    y = "residuals"
+    y = "Residuals"
   ) 
 ```
 
@@ -133,7 +133,7 @@ cv_df %>%
     values_to = "rmse",
     names_prefix = "rmse_") %>% 
   mutate(model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin() +
+  ggplot(aes(x = model, y = rmse)) + geom_violin(aes(fill = model)) +
   labs(
     title = "comparison of the cross-validated prediction error", 
     x = "models",
@@ -159,7 +159,7 @@ weather_df =
 
 Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities 
 
-```{r}
+```{r message=FALSE}
 set.seed(1)
 estimates =
   weather_df %>% 
@@ -189,10 +189,11 @@ estimates %>%
   ggplot(aes(x = r.squared)) + geom_density() +
   labs(
     title = "distribution of R-square", 
+    x = "R^2"
   ) 
 ```
 
-The mean of R square distribution is around 0.91. This distribution has a heavy tail extending to low values, which could means that some bootstrap samples have quite low R-square. Thus, it indicates that there are some outliers that their independent variables is not explaining much in the variation of my dependent variable!!!!!
+The mean of R square distribution is around 0.91, means that the R squared estimates mostly lays around 0.91. This distribution has a heavy tail extending to low values, which could means that some bootstrap samples have quite low R-square. Thus, it indicates that there are some outliers that their independent variables is not explaining much in the variation of my dependent variable
 
 ```{r}
 estimates %>% 
@@ -203,7 +204,7 @@ estimates %>%
     x = "log(b0*b1)")
 ```
 
-This distribution of $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is generally normal with mean around 2.02. But the distribution have a little "shoulder" near 2.025. Maybe some large outliers are included in the bootstrap sample.!!!!!!
+This distribution of $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is generally normal with mean around 2.02, means the estimates mostly lays around 2.02. But the distribution have a little "shoulder" near 2.025. 
 
 
 ```{r}

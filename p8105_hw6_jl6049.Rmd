@@ -121,7 +121,7 @@ cv_df =
   mutate(
     rmse_final = map2_dbl(fit_final, test, ~rmse(model = .x, data = .y)),
     rmse_main = map2_dbl(fit_main, test, ~rmse(model = .x, data = .y)),
-    rmse_nteraction = map2_dbl(fit_interaction, test, ~rmse(model = .x, data = .y)))
+    rmse_interaction = map2_dbl(fit_interaction, test, ~rmse(model = .x, data = .y)))
 
 ```
 

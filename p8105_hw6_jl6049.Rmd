@@ -211,14 +211,14 @@ This distribution of $\log(\hat{\beta}_0 * \hat{\beta}_1)$ is generally normal w
 ci_r =
 estimates %>%
   summarise(qlow_r = quantile(r.squared,probs = c(0.025)),
-            qhigh_r = quantile(r.squared,probs = c(0.0975)))
+            qhigh_r = quantile(r.squared,probs = c(0.975)))
 
 ci_r %>% knitr::kable()
 
 ci_b =
 estimates %>%
   summarise(qlow_b = quantile(logb0b1,probs = c(0.025)),
-            qhigh_b = quantile(logb0b1,probs = c(0.0975)))
+            qhigh_b = quantile(logb0b1,probs = c(0.975)))
 
 ci_b %>% knitr::kable()
 
